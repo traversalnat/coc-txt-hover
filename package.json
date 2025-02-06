@@ -1,0 +1,49 @@
+{
+  "name": "coc-txt-hover",
+  "version": "0.0.0-development",
+  "description": "doHover for txt to look up a word online.",
+  "author": "Hi9 <1914619958@qq.com>",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "keywords": [
+    "coc.nvim"
+  ],
+  "engines": {
+    "coc": "^0.0.82"
+  },
+  "scripts": {
+    "watch": "node esbuild.mjs --watch",
+    "build": "node esbuild.mjs",
+    "prepare": "node esbuild.mjs"
+  },
+  "devDependencies": {
+    "coc.nvim": "^0.0.83-next.18",
+    "esbuild": "^0.19.8",
+    "typescript": "^5.3.3"
+  },
+  "activationEvents": [
+    "*"
+  ],
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "coc-txt-hover configuration",
+      "properties": {
+        "coc-txt-hover.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable coc-txt-hover extension"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "coc-txt-hover.Command",
+        "title": "coc-txt-hover command title"
+      }
+    ]
+  },
+  "dependencies": {
+    "xior": "^0.6.3"
+  }
+}
