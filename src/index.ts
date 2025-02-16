@@ -1,24 +1,71 @@
-import {ExtensionContext, languages, Hover, Position, TextDocument, workspace, window, fetch} from 'coc.nvim';
-import axios from 'xior';
+import {ExtensionContext, languages, Hover, Position, TextDocument, window, fetch, Range} from 'coc.nvim';
+import nlp from "compromise";
+
+/**
+ * 获取单词的原型（词干）
+ * @param word 输入的单词
+ * @returns 还原后的单词
+ */
+function getWordPrototype(word: string): string {
+  const doc = nlp(word);
+  return doc.verbs().toInfinitive().out() || 
+         doc.nouns().toSingular().out() || 
+         word;
+}
+
+async function queryWordMeaning(wordToQuery: string): Promise<string> {
+    const sqlite3 = require('sqlite3').verbose();
+    // 定义数据库文件路径
+    const dbPath = __dirname + '/vocab.db';
+
+    return new Promise((resolve, reject) => {
+        // 打开数据库连接
+        const db = new sqlite3.Database(dbPath, (err) => {
+            if (err) {
+                reject(new Error('数据库连接失败: ' + err.message));
+                return;
+            }
+
+            // 构建 SQL 查询语句
+            const sql = `SELECT word, trans FROM dictionary WHERE word LIKE '${wordToQuery}' LIMIT 1`;
+
+            // 执行查询
+            db.get(sql, [], (err, row) => {
+                if (err) {
+                    reject(new Error('查询出错: ' + err.message));
+                } else if (row) {
+                    resolve(`word: ${row.word}\n` + "trans" + row.trans);
+                } else {
+                    const wordPrototype = getWordPrototype(wordToQuery);
+                    const sqlPrototype = `SELECT word, trans FROM dictionary WHERE word LIKE '${wordPrototype}' LIMIT 1`;
+                    db.get(sqlPrototype, [], (err, row) => {
+                        if (err) {
+                            reject(new Error('查询出错: ' + err.message));
+                        }
+                        else if (row) {
+                            resolve(`word: ${row.word}\n` + "trans" + row.trans);
+                        }
+                        else {
+                            resolve(`未找到单词 "${wordPrototype}" 的含义`);
+                        }
+                    });
+                }
+                // 关闭数据库连接
+                db.close((err) => {
+                    if (err) {
+                        console.error('关闭数据库连接出错:', err.message);
+                    }
+                });
+            });
+        });
+    });
+}
 
 // 查询英文单词含义的函数
 async function getWordMeaning(word: string): Promise<string | null> {
     try {
-        const response = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
-        const data = response.data;
-        if (Array.isArray(data) && data.length > 0) {
-            const meanings = data[0].meanings;
-            let result = '';
-            for (const meaning of meanings) {
-                const partOfSpeech = meaning.partOfSpeech;
-                const definitions = meaning.definitions;
-                result += `**${partOfSpeech}**:\n`;
-                for (let i = 0; i < definitions.length; i++) {
-                    result += `${i + 1}. ${definitions[i].definition}\n`;
-                }
-            }
-            return result;
-        }
+        const data = await queryWordMeaning(word);
+        return data;
     } catch (error) {
         const message = `error meaning ${error}`
         window.showInformationMessage(message)
